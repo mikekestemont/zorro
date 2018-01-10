@@ -1,8 +1,18 @@
 import argparse
-import random
 
+import random
+random.seed(1001)
+
+import torch
+try:
+    torch.manual_seed(1001)
+    torch.cuda.manual_seed(1001)
+except:
+    print('no NVIDIA driver found')
+
+import seqmod.utils as u
+from seqmod.modules.encoder_decoder import make_rnn_encoder_decoder
 from seqmod.misc.dataset import PairedDataset, Dict
-from seqmod import utils as u
 
 from zorro.data import TripleStore
 
@@ -18,13 +28,13 @@ def main():
     parser.add_argument('--dev', default=0.05, type=float)
     parser.add_argument('--test', default=0.05, type=float)
     parser.add_argument('--rnd_seed', default=12345, type=int)
-    parser.add_argument('--max_triples', default=100, type=int)
+    parser.add_argument('--max_triples', default=1000, type=int)
     parser.add_argument('--allow_overlap', action='store_true', default=False)
     parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--reverse', action='store_true', default=False)
 
     # training
-    parser.add_argument('--batch_size', default=2, type=int)
+    parser.add_argument('--batch_size', default=15, type=int)
 
     args = parser.parse_args()
 
@@ -41,28 +51,23 @@ def main():
     left, focus, right = zip(*triples)
     del triples
 
-    if args.path is not None:
-        with open(args.path, 'rb+') as f:
-            dataset = PairedDataset.from_disk(f)
-        dataset.set_batch_size(args.batch_size)
-        dataset.set_gpu(args.gpu)
-        train, valid = dataset.splits(sort_by='src', dev=args.dev, test=None)
-        src_dict = dataset.dicts['src']
-    else:
-        vocab_dict = Dict(pad_token=u.PAD, eos_token=u.EOS, bos_token=u.BOS,
-                          min_freq=args.min_char_freq)
-        vocab_dict.fit(left, focus, right) # inefficient 
-        print(vocab_dict.vocab)
-        train, valid, test = PairedDataset(
-            src=(list(focus), list(left), list(right)), trg=None,
-            d=(vocab_dict, vocab_dict, vocab_dict),
-            batch_size=args.batch_size, gpu=args.gpu,
-            align_right=args.reverse, fitted=True
-        ).splits(dev=args.dev, test=args.test, sort=True)
+    vocab_dict = Dict(pad_token='<PAD>',
+                      min_freq=args.min_char_freq, sequential=True)
+    vocab_dict.fit(left, focus, right) # inefficient?
+    
+    train, dev, test = PairedDataset(
+        src=(left, focus, right, ), trg=None,
+        d={'src': (vocab_dict, vocab_dict, vocab_dict, )},
+        batch_size=args.batch_size, gpu=args.gpu,
+        align_right=args.reverse, fitted=False).splits(sort_by='src', dev=args.dev, test=args.test, sort=True)
 
-    print(f' * vocabulary size. {len(vocab_dict)}')
-    print(f' * number of train batches. {len(train)}')
-    print(f' * maximum batch size. {batch_size}')
+    print(f' * vocabulary size {len(vocab_dict)}')
+    print(f' * number of train batches {len(train)}')
+    print(f' * maximum batch size {args.batch_size}')
+
+    model = make_rnn_encoder_decoder(2, 64, 150, vocab_dict, cell='GRU', bidi=True, att_type='general')
+
+    u.initialize_model(model, rnn={'type': 'orthogonal', 'args': {'gain': 1.0}})
 
 if __name__ == '__main__':
     main()
