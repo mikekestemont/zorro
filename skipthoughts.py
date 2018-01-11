@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 from seqmod.misc.beam_search import Beam
-from seqmod.modules.encoder import RNNEncoder, GRLRNNEncoder
+from seqmod.modules.encoder import RNNEncoder
 from seqmod.modules.decoder import RNNDecoder
 from seqmod.modules.embedding import Embedding
 from seqmod.modules.torch_utils import flip, shards
@@ -13,7 +13,7 @@ from seqmod.modules.torch_utils import flip, shards
 from seqmod.modules.exposure import scheduled_sampling
 
 
-class EncoderDecoder(nn.Module):
+class Skipthoughts(nn.Module):
     """
     Configurable encoder-decoder architecture
 
@@ -26,7 +26,7 @@ class EncoderDecoder(nn.Module):
     - reverse: bool, whether to run the decoder in reversed order
     """
     def __init__(self, encoder, decoder, exposure_rate=1., reverse=False):
-        super(EncoderDecoder, self).__init__()
+        super(Skipthoughts, self).__init__()
 
         self.encoder = encoder
         self.decoder = decoder
@@ -46,7 +46,7 @@ class EncoderDecoder(nn.Module):
         """
         Return trainable parameters
         """
-        for p in super(EncoderDecoder, self).parameters():
+        for p in super(Skipthoughts, self).parameters():
             if only_trainable and not p.requires_grad:
                 continue
             yield p
@@ -80,9 +80,7 @@ class EncoderDecoder(nn.Module):
         (src, trgs), (src_conds, trg_conds) = batch_data, (None, None)
 
         src = src[0]
-
-        # limit to only right target
-        trg = trgs[1]
+        left_trg, trg = trgs
 
         if self.encoder.conditional:
             (src, *src_conds) = src
@@ -157,6 +155,7 @@ class EncoderDecoder(nn.Module):
         """
         eos = self.decoder.embeddings.d.get_eos()
         bos = self.decoder.embeddings.d.get_bos()
+        print(bos)
         if hasattr(self, 'reverse') and self.reverse:
             bos, eos = eos, bos
         seq_len, batch_size = src.size()
@@ -251,7 +250,7 @@ def make_embeddings(src_dict, trg_dict, emb_dim, word_dropout):
     return src_embeddings, trg_embeddings
 
 
-def make_rnn_encoder_decoder(
+def make_skipthoughts_model(
         num_layers,
         emb_dim,
         hid_dim,
@@ -330,4 +329,4 @@ def make_rnn_encoder_decoder(
         if encoder_dims != 2:
             raise ValueError("Non attentional decoder needs 2D encoding")
 
-    return EncoderDecoder(encoder, decoder, reverse=reverse)
+    return Skipthoughts(encoder, decoder, reverse=reverse)
