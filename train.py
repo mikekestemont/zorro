@@ -24,7 +24,7 @@ import zorro.utils
 from zorro.data import TripleStore, CoupleStore
 
 
-def make_encdec_hook(target, gpu, beam=True, max_len=4):
+def make_translation_hook(target, gpu, beam=True, max_len=4):
 
     def hook(trainer, epoch, batch_num, checkpoint):
         trainer.log("info", "Translating {}".format(target))
@@ -34,6 +34,17 @@ def make_encdec_hook(target, gpu, beam=True, max_len=4):
         hyps = [u.format_hyp(score, hyp, num + 1, trg_dict)
                 for num, (score, hyp) in enumerate(zip(scores, hyps))]
         trainer.log("info", '\n***' + ''.join(hyps) + '\n***')
+
+    return hook
+
+
+def make_reshingle_hook(args, dict_):
+
+    def hook(trainer, epoch, batch_num, checkpoint):
+        trainer.log('info', 'Reshingling data')
+        train, valid, _ = zorro.utils.shingle_dataset(args, focus_size=epoch + 1, right_size= epoch + 1)
+        trainer.datasets['train'] = train
+        trainer.datasets['valid'] = valid
 
     return hook
 
@@ -89,61 +100,8 @@ def main():
     parser.add_argument('--deepout_layers', type=int, default=0)
 
     args = parser.parse_args()
-    print(args.task)
 
-    # load the data:
-    if args.task == 'triples':
-        ds = list(TripleStore(args.input,
-                         shingling=args.shingling,
-                         focus_size=args.focus_size,
-                         left_size=args.left_size,
-                         right_size=args.right_size,
-                         shingle_stride=args.shingle_stride,
-                         allow_overlap=args.allow_overlap,
-                         max_triples=args.max_items))
-        print(f'loaded {len(ds)} triples')
-    elif args.task == 'couples':
-        ds = list(CoupleStore(args.input,
-                         shingling=args.shingling,
-                         focus_size=args.focus_size,
-                         right_size=args.right_size,
-                         shingle_stride=args.shingle_stride,
-                         allow_overlap=args.allow_overlap,
-                         max_couples=args.max_items))
-        print(f'loaded {len(ds)} couples')
-    else:
-        raise ValueError("`Task` should be one of ('couples', 'triples')")
-
-    # random shuffle:
-    if args.shuffle:
-        print('shuffling batches...')
-        random.seed(args.rnd_seed)
-        random.shuffle(ds)
-
-    for c in ds[:10]:
-        print('\t'.join(c))
-
-    vocab_dict = Dict(pad_token='<PAD>', bos_token='<EOS>', eos_token='<EOS>',
-                      min_freq=args.min_char_freq, sequential=True, force_unk=True)
-    if args.task == 'triples':
-        left, focus, right = zip(*ds)
-        vocab_dict.fit(left, focus, right) # sometimes inefficient? # do a partial fit in the triple store?
-        del ds
-        train, valid = PairedDataset(
-            src=(focus,), trg=(left, right),
-            d={'src': (vocab_dict,), 'trg': (vocab_dict, vocab_dict)},
-            batch_size=args.batch_size, gpu=args.gpu,
-            align_right=args.reverse, fitted=False).splits(sort_by='src', dev=args.dev, test=None, sort=True)
-    elif args.task == 'couples':
-        focus, right = zip(*ds)
-        vocab_dict.fit(focus, right) # sometimes inefficient? # do a partial fit in the triple store?
-        del ds
-        train, valid = PairedDataset(
-            src=(focus,), trg=(right,),
-            d={'src': (vocab_dict,), 'trg': (vocab_dict,)},
-            batch_size=args.batch_size, gpu=args.gpu,
-            align_right=args.reverse, fitted=False).splits(sort_by='src', dev=args.dev, test=None, sort=True)
-
+    train, valid, vocab_dict = zorro.utils.shingle_dataset(args, vocab_dict=None)
 
     print(f' * vocabulary size {len(vocab_dict)}')
     print(f' * number of train batches {len(train)}')
@@ -170,18 +128,18 @@ def main():
     if args.gpu:
         model.cuda()
 
-    early_stopping = EarlyStopping(patience=args.patience, maxsize=3)
+    #early_stopping = EarlyStopping(patience=args.patience, maxsize=3)
+    early_stopping = None
     trainer = Trainer(
         model, {'train': train, 'valid': valid}, optimizer,
         early_stopping=early_stopping, max_norm=args.max_norm)
     trainer.add_loggers(StdLogger())
-    #trainer.add_loggers(TensorboardLogger(comment='encdec'))
 
-    hook = make_encdec_hook(args.target, args.gpu, beam=args.beam, max_len=args.right_size)
+    hook = make_translation_hook(args.target, args.gpu, beam=args.beam, max_len=args.right_size)
     trainer.add_hook(hook, num_checkpoints=3)
 
-    #hook = make_att_hook(args.target, args.gpu, beam=args.beam, max_len=args.right_size)
-    #trainer.add_hook(hook, num_checkpoints=3)
+    hook = make_reshingle_hook(args=args, dict_=vocab_dict)
+    trainer.add_hook(hook, num_checkpoints=3)
 
     hook = u.make_schedule_hook(
         inflection_sigmoid(len(train) * 2, 1.75, inverse=True))
