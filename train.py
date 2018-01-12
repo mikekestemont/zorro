@@ -20,49 +20,20 @@ from seqmod.misc import StdLogger, VisdomLogger, TensorboardLogger
 from seqmod.misc import PairedDataset, Dict, inflection_sigmoid
 import seqmod.utils as u
 
-from zorro.data import TripleStore
+import zorro.utils
+from zorro.data import TripleStore, CoupleStore
 
 
-def translate(model, target, gpu, beam=True):
-    src_dict = model.encoder.embeddings.d
-    inp = torch.LongTensor(list(src_dict.transform([target]))).transpose(0, 1)
-    length = torch.LongTensor([len(target)]) + 2
-    inp, length = u.wrap_variables((inp, length), volatile=True, gpu=gpu)
-    if beam:
-        scores, hyps, _ = model.translate_beam(
-            inp, length, beam_width=5, max_decode_len=4)
-    else:
-        scores, hyps, _ = model.translate(inp, length, max_decode_len=4)
-
-    return scores, hyps
-
-
-def make_encdec_hook(target, gpu, beam=True):
+def make_encdec_hook(target, gpu, beam=True, max_len=4):
 
     def hook(trainer, epoch, batch_num, checkpoint):
         trainer.log("info", "Translating {}".format(target))
         trg_dict = trainer.model.decoder.embeddings.d
-        scores, hyps = translate(trainer.model, target, gpu, beam=beam)
+        scores, hyps = zorro.utils.translate(trainer.model, target, gpu,
+                                 beam=beam, max_len=max_len)
         hyps = [u.format_hyp(score, hyp, num + 1, trg_dict)
                 for num, (score, hyp) in enumerate(zip(scores, hyps))]
         trainer.log("info", '\n***' + ''.join(hyps) + '\n***')
-
-    return hook
-
-
-def make_att_hook(target, gpu, beam=False):
-    assert not beam, "beam doesn't output attention yet"
-
-    def hook(trainer, epoch, batch_num, checkpoint):
-        d = train.decoder.embedding.d
-        scores, hyps, atts = translate(trainer.model, target, gpu, beam=beam)
-        trainer.log("attention",
-                    {"att": atts[0],
-                     "score": sum(scores[0]) / len(hyps[0]),
-                     "target": [d.bos_token] + list(target),
-                     "hyp": ' '.join([d.vocab[i] for i in hyps[0]]).split(),
-                     "epoch": epoch,
-                     "batch_num": batch_num})
 
     return hook
 
@@ -77,8 +48,15 @@ def main():
     parser.add_argument('--max_len', default=15, type=int)
     parser.add_argument('--dev', default=0.1, type=float)
     parser.add_argument('--rnd_seed', default=12345, type=int)
-    parser.add_argument('--max_triples', default=1000, type=int)
+    parser.add_argument('--max_items', default=1000, type=int)
+    parser.add_argument('--task', default='couples', type=str)
+    parser.add_argument('--focus_size', default=15, type=int)
+    parser.add_argument('--left_size', default=15, type=int)
+    parser.add_argument('--right_size', default=15, type=int)
+    parser.add_argument('--shingle_stride', default=None, type=int)
+    parser.add_argument('--shingling', default='characters', type=str)
     parser.add_argument('--allow_overlap', action='store_true', default=False)
+    parser.add_argument('--shuffle', action='store_true')
 
     # training
     parser.add_argument('--epochs', default=5, type=int)
@@ -94,40 +72,78 @@ def main():
     parser.add_argument('--reverse', action='store_true')
     parser.add_argument('--checkpoint', default=5, type=int)
     parser.add_argument('--hooks_per_epoch', default=None, type=int)
-    parser.add_argument('--target', default='redrum', type=str)
+    parser.add_argument('--target', default='Ze was', type=str)
     parser.add_argument('--beam', action='store_true')
     parser.add_argument('--plot', action='store_true')
 
-    # saving
+    # model
     parser.add_argument('--model_path', default='./', type=str)
+    parser.add_argument('--num_layers', default=1, type=int)
+    parser.add_argument('--emb_dim', default=64, type=int)
+    parser.add_argument('--hid_dim', default=150, type=int)
+    parser.add_argument('--cell', default='GRU')
+    parser.add_argument('--tie_weights', action='store_true')
+    parser.add_argument('--train_init', action='store_true')
+    parser.add_argument('--add_init_jitter', action='store_true')
+    parser.add_argument('--encoder-summary', default='inner-attention')
+    parser.add_argument('--deepout_layers', type=int, default=0)
 
     args = parser.parse_args()
+    print(args.task)
 
-    # load the triples:
-    triple_store = TripleStore(args.input,
-                               allow_overlap=args.allow_overlap,
-                               max_triples=args.max_triples)
-    triples = list(triple_store)
-    print(f'loaded {len(triple_store)} triples')
-
+    # load the data:
+    if args.task == 'triples':
+        ds = list(TripleStore(args.input,
+                         shingling=args.shingling,
+                         focus_size=args.focus_size,
+                         left_size=args.left_size,
+                         right_size=args.right_size,
+                         shingle_stride=args.shingle_stride,
+                         allow_overlap=args.allow_overlap,
+                         max_triples=args.max_items))
+        print(f'loaded {len(ds)} triples')
+    elif args.task == 'couples':
+        ds = list(CoupleStore(args.input,
+                         shingling=args.shingling,
+                         focus_size=args.focus_size,
+                         right_size=args.right_size,
+                         shingle_stride=args.shingle_stride,
+                         allow_overlap=args.allow_overlap,
+                         max_couples=args.max_items))
+        print(f'loaded {len(ds)} couples')
+    else:
+        raise ValueError("`Task` should be one of ('couples', 'triples')")
 
     # random shuffle:
-    print('shuffling batches...')
-    random.seed(args.rnd_seed)
-    random.shuffle(triples)
+    if args.shuffle:
+        print('shuffling batches...')
+        random.seed(args.rnd_seed)
+        random.shuffle(ds)
 
-    left, focus, right = zip(*triples)
-    del triples
+    for c in ds[:10]:
+        print('\t'.join(c))
 
     vocab_dict = Dict(pad_token='<PAD>', bos_token='<EOS>', eos_token='<EOS>',
                       min_freq=args.min_char_freq, sequential=True, force_unk=True)
-    vocab_dict.fit(left, focus, right) # sometimes inefficient? # do a partial fit in the triple store?
-    
-    train, valid = PairedDataset(
-        src=(focus,), trg=(left, right),
-        d={'src': (vocab_dict,), 'trg': (vocab_dict, vocab_dict)},
-        batch_size=args.batch_size, gpu=args.gpu,
-        align_right=args.reverse, fitted=False).splits(sort_by='src', dev=args.dev, test=None, sort=True)
+    if args.task == 'triples':
+        left, focus, right = zip(*ds)
+        vocab_dict.fit(left, focus, right) # sometimes inefficient? # do a partial fit in the triple store?
+        del ds
+        train, valid = PairedDataset(
+            src=(focus,), trg=(left, right),
+            d={'src': (vocab_dict,), 'trg': (vocab_dict, vocab_dict)},
+            batch_size=args.batch_size, gpu=args.gpu,
+            align_right=args.reverse, fitted=False).splits(sort_by='src', dev=args.dev, test=None, sort=True)
+    elif args.task == 'couples':
+        focus, right = zip(*ds)
+        vocab_dict.fit(focus, right) # sometimes inefficient? # do a partial fit in the triple store?
+        del ds
+        train, valid = PairedDataset(
+            src=(focus,), trg=(right,),
+            d={'src': (vocab_dict,), 'trg': (vocab_dict,)},
+            batch_size=args.batch_size, gpu=args.gpu,
+            align_right=args.reverse, fitted=False).splits(sort_by='src', dev=args.dev, test=None, sort=True)
+
 
     print(f' * vocabulary size {len(vocab_dict)}')
     print(f' * number of train batches {len(train)}')
@@ -136,7 +152,13 @@ def main():
 
     args.checkpoint = min(len(train), args.checkpoint)
 
-    model = make_skipthoughts_model(1, 64, 50, vocab_dict, cell='GRU', bidi=True, att_type='general')
+    model = make_skipthoughts_model(num_layers=args.num_layers,
+                                    emb_dim=args.emb_dim,
+                                    hid_dim=args.hid_dim,
+                                    src_dict=vocab_dict,
+                                    cell='GRU', bidi=True,
+                                    att_type='general',
+                                    task=args.task)
 
     u.initialize_model(model, rnn={'type': 'orthogonal', 'args': {'gain': 1.0}})
 
@@ -155,8 +177,11 @@ def main():
     trainer.add_loggers(StdLogger())
     #trainer.add_loggers(TensorboardLogger(comment='encdec'))
 
-    hook = make_encdec_hook(args.target, args.gpu, beam=args.beam)
+    hook = make_encdec_hook(args.target, args.gpu, beam=args.beam, max_len=args.right_size)
     trainer.add_hook(hook, num_checkpoints=3)
+
+    #hook = make_att_hook(args.target, args.gpu, beam=args.beam, max_len=args.right_size)
+    #trainer.add_hook(hook, num_checkpoints=3)
 
     hook = u.make_schedule_hook(
         inflection_sigmoid(len(train) * 2, 1.75, inverse=True))
@@ -167,7 +192,6 @@ def main():
         use_schedule=args.use_schedule)
 
     u.save_checkpoint(args.model_path, best_model, vars(args), d=vocab_dict, ppl=valid_loss)
-
 
 
 if __name__ == '__main__':

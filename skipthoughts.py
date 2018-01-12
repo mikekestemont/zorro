@@ -25,11 +25,13 @@ class Skipthoughts(nn.Module):
         during training.
     - reverse: bool, whether to run the decoder in reversed order
     """
-    def __init__(self, encoder, decoder, exposure_rate=1., reverse=False):
+    def __init__(self, encoder, decoder, exposure_rate=1., reverse=False, task='couples'):
         super(Skipthoughts, self).__init__()
 
         self.encoder = encoder
         self.decoder = decoder
+
+        self.task = task
 
         self.exposure_rate = exposure_rate
         self.reverse = reverse
@@ -80,7 +82,11 @@ class Skipthoughts(nn.Module):
         (src, trgs), (src_conds, trg_conds) = batch_data, (None, None)
 
         src = src[0]
-        left_trg, trg = trgs
+        if self.task == 'couples':
+            trg = trgs[0]
+        elif self.task == 'triples':
+            left_trg, trg = trgs
+
 
         if self.encoder.conditional:
             (src, *src_conds) = src
@@ -155,7 +161,7 @@ class Skipthoughts(nn.Module):
         """
         eos = self.decoder.embeddings.d.get_eos()
         bos = self.decoder.embeddings.d.get_bos()
-        print(bos)
+        
         if hasattr(self, 'reverse') and self.reverse:
             bos, eos = eos, bos
         seq_len, batch_size = src.size()
@@ -271,7 +277,8 @@ def make_skipthoughts_model(
         add_init_jitter=False,
         cond_dims=None,
         cond_vocabs=None,
-        reverse=False
+        reverse=False,
+        task='couples',
 ):
     """
     - num_layers: int, Number of layers for both the encoder and the decoder.
@@ -303,7 +310,12 @@ def make_skipthoughts_model(
         to each condition.
     - cond_vocabs: tuple of integers with the number of classes for each
         condition in same order as `cond_dims`.
+    - task: str (default: 'couples'), one of ('couples', 'triples')
     """
+    assert task in ('couples', 'triples'), f"Unsupported `task`: {task}"
+    if task == 'triples':
+        raise NotImplementedError
+
     src_embeddings, trg_embeddings = make_embeddings(
         src_dict, trg_dict, emb_dim, word_dropout)
 
@@ -329,4 +341,4 @@ def make_skipthoughts_model(
         if encoder_dims != 2:
             raise ValueError("Non attentional decoder needs 2D encoding")
 
-    return Skipthoughts(encoder, decoder, reverse=reverse)
+    return Skipthoughts(encoder, decoder, reverse=reverse, task=task)
