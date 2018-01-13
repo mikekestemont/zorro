@@ -12,10 +12,10 @@ except:
 
 from torch import nn, optim
 
-from skipthoughts import make_skipthoughts_model
+from skipthoughts import make_skipthoughts_model, SkipthoughtsTrainer
 
 from seqmod.misc.dataset import PairedDataset, Dict
-from seqmod.misc import EarlyStopping, Trainer
+from seqmod.misc import EarlyStopping
 from seqmod.misc import StdLogger, VisdomLogger, TensorboardLogger
 from seqmod.misc import PairedDataset, Dict, inflection_sigmoid
 import seqmod.utils as u
@@ -34,17 +34,6 @@ def make_translation_hook(target, gpu, beam=True, max_len=4):
         hyps = [u.format_hyp(score, hyp, num + 1, trg_dict)
                 for num, (score, hyp) in enumerate(zip(scores, hyps))]
         trainer.log("info", '\n***' + ''.join(hyps) + '\n***')
-
-    return hook
-
-
-def make_reshingle_hook(args, dict_):
-
-    def hook(trainer, epoch, batch_num, checkpoint):
-        trainer.log('info', 'Reshingling data')
-        train, valid, _ = zorro.utils.shingle_dataset(args, focus_size=epoch + 1, right_size= epoch + 1)
-        trainer.datasets['train'] = train
-        trainer.datasets['valid'] = valid
 
     return hook
 
@@ -130,15 +119,13 @@ def main():
 
     #early_stopping = EarlyStopping(patience=args.patience, maxsize=3)
     early_stopping = None
-    trainer = Trainer(
+    trainer = SkipthoughtsTrainer(
         model, {'train': train, 'valid': valid}, optimizer,
         early_stopping=early_stopping, max_norm=args.max_norm)
     trainer.add_loggers(StdLogger())
+    trainer.set_additional_params(args, vocab_dict)
 
     hook = make_translation_hook(args.target, args.gpu, beam=args.beam, max_len=args.right_size)
-    trainer.add_hook(hook, num_checkpoints=3)
-
-    hook = make_reshingle_hook(args=args, dict_=vocab_dict)
     trainer.add_hook(hook, num_checkpoints=3)
 
     hook = u.make_schedule_hook(

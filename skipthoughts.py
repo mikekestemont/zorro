@@ -5,12 +5,33 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 from seqmod.misc.beam_search import Beam
+from seqmod.misc import Trainer
 from seqmod.modules.encoder import RNNEncoder
 from seqmod.modules.decoder import RNNDecoder
 from seqmod.modules.embedding import Embedding
 from seqmod.modules.torch_utils import flip, shards
 
 from seqmod.modules.exposure import scheduled_sampling
+
+import zorro.utils
+
+class SkipthoughtsTrainer(Trainer):
+    def set_additional_params(self, dataset_args, vocab_dict):
+        self.dataset_args = dataset_args
+        self.vocab_dict = vocab_dict
+
+    def on_epoch_end(self, epoch, loss, examples, duration, valid_loss=None):
+        self.log("epoch_end", {"epoch": epoch,
+                               "loss": loss.pack(labels=True),
+                               "examples": examples,
+                               "duration": duration})
+        self.log('info', 'Reshingling data')
+        train, valid, _ = zorro.utils.shingle_dataset(self.dataset_args,
+                                                      focus_size=epoch + 1,
+                                                      right_size=epoch + 1,
+                                                      vocab_dict=self.vocab_dict)
+        self.datasets['train'] = train
+        self.datasets['valid'] = valid
 
 
 class Skipthoughts(nn.Module):

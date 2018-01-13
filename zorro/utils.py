@@ -54,11 +54,11 @@ def shingle_dataset(args, vocab_dict=None, focus_size=None, right_size=None):
         print('\t'.join(c))
 
     if vocab_dict is None:
-        print('yes')
         vocab_dict = Dict(pad_token=u.PAD, bos_token=u.BOS, eos_token=u.EOS,
                       min_freq=args.min_char_freq, sequential=True, force_unk=True)
     if args.task == 'triples':
         left, focus, right = zip(*dataset)
+        del dataset
         if vocab_dict is None:
             vocab_dict.fit(left, focus, right) # sometimes inefficient? # do a partial fit in the triple store?
         
@@ -69,6 +69,7 @@ def shingle_dataset(args, vocab_dict=None, focus_size=None, right_size=None):
             align_right=args.reverse, fitted=False).splits(sort_by='src', dev=args.dev, test=None, sort=True)
     elif args.task == 'couples':
         focus, right = zip(*dataset)
+        del dataset
         if not vocab_dict.fitted:
             vocab_dict.fit(focus, right) # sometimes inefficient? # do a partial fit in the triple store?
         
