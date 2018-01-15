@@ -17,7 +17,7 @@ from seqmod.modules.embedding import Embedding
 from seqmod.modules.torch_utils import flip, shards
 from seqmod.modules.exposure import scheduled_sampling
 
-import zorro.utils
+from zorro.utils import shingle_dataset
 
 class SkipthoughtsTrainer(Trainer):
     def set_additional_params(self, add_args, vocab_dict):
@@ -44,17 +44,23 @@ class SkipthoughtsTrainer(Trainer):
                                   suffix = 'checkp',
                                   d=self.vocab_dict, ppl=None)
         
-        # tmp remove datasets to avoid memory issues:
-        del self.datasets['train']
-        del self.datasets['valid']
+        if self.add_args.grow:
+            # tmp remove datasets to avoid memory issues:
+            del self.datasets['train']
+            del self.datasets['valid']
+            
+            fs = self.add_args.focus_size + (epoch + 1) % self.add_args.grow_n_epochs
+            rs = self.add_args.right_size + (epoch + 1) % self.add_args.grow_n_epochs
+            
+            # reshingle the data:
+            train, valid, _ = shingle_dataset(self.add_args,
+                                              focus_size=fs,
+                                              right_size=rs,
+                                              vocab_dict=self.vocab_dict)
 
-        # reshingle the data;
-        train, valid, _ = zorro.utils.shingle_dataset(self.add_args,
-                                                      focus_size=epoch + 1,
-                                                      right_size=epoch + 1,
-                                                      vocab_dict=self.vocab_dict)
-        self.datasets['train'] = train
-        self.datasets['valid'] = valid
+            # add new datasets to model
+            self.datasets['train'] = train
+            self.datasets['valid'] = valid
 
 
 class Skipthoughts(nn.Module):

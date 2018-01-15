@@ -56,6 +56,8 @@ def main():
     parser.add_argument('--shingling', default='characters', type=str)
     parser.add_argument('--allow_overlap', action='store_true', default=False)
     parser.add_argument('--shuffle', action='store_true')
+    parser.add_argument('--grow', action='store_true')
+    parser.add_argument('--grow_n_epochs', default=3, type=int)
 
     # training
     parser.add_argument('--epochs', default=5, type=int)
@@ -118,7 +120,7 @@ def main():
     if args.gpu:
         model.cuda()
 
-    early_stopping = EarlyStopping(patience=2, maxsize=3)
+    early_stopping = EarlyStopping(patience=3, maxsize=5)
     trainer = SkipthoughtsTrainer(
         model, {'train': train, 'valid': valid}, optimizer,
         early_stopping=early_stopping, max_norm=args.max_norm)
@@ -139,7 +141,7 @@ def main():
         use_schedule=args.use_schedule)
 
     u.save_checkpoint(args.model_path, best_model, vars(args),
-                      d=vocab_dict, ppl=valid_loss)
+                      d=vocab_dict, ppl=valid_loss, suffix='final')
 
 
 if __name__ == '__main__':
