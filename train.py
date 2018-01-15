@@ -12,8 +12,6 @@ except:
 
 from torch import nn, optim
 
-from skipthoughts import make_skipthoughts_model, SkipthoughtsTrainer
-
 from seqmod.misc.dataset import PairedDataset, Dict
 from seqmod.misc import EarlyStopping
 from seqmod.misc import StdLogger, VisdomLogger, TensorboardLogger
@@ -21,7 +19,8 @@ from seqmod.misc import PairedDataset, Dict, inflection_sigmoid
 import seqmod.utils as u
 
 import zorro.utils
-from zorro.data import TripleStore, CoupleStore
+from zorro.data import CoupleStore
+from zorro.skipthoughts import make_skipthoughts_model, SkipthoughtsTrainer
 
 
 def make_translation_hook(target, gpu, beam=True, max_len=4):
@@ -30,7 +29,7 @@ def make_translation_hook(target, gpu, beam=True, max_len=4):
         trainer.log("info", "Translating {}".format(target))
         trg_dict = trainer.model.decoder.embeddings.d
         scores, hyps = zorro.utils.translate(trainer.model, target, gpu,
-                                 beam=beam, max_len=max_len)
+                                             beam=beam, max_len=max_len)
         hyps = [u.format_hyp(score, hyp, num + 1, trg_dict)
                 for num, (score, hyp) in enumerate(zip(scores, hyps))]
         trainer.log("info", '\n***' + ''.join(hyps) + '\n***')
@@ -68,7 +67,7 @@ def main():
     parser.add_argument('--dropout', default=0.25, type=float)
     parser.add_argument('--word_dropout', default=0.0, type=float)
     parser.add_argument('--use_schedule', action='store_true')
-    parser.add_argument('--patience', default=2, type=int)
+    parser.add_argument('--patience', default=10, type=int)
     parser.add_argument('--reverse', action='store_true')
     parser.add_argument('--checkpoint', default=5, type=int)
     parser.add_argument('--hooks_per_epoch', default=None, type=int)
@@ -77,7 +76,7 @@ def main():
     parser.add_argument('--plot', action='store_true')
 
     # model
-    parser.add_argument('--model_path', default='./', type=str)
+    parser.add_argument('--model_path', default='./model_storage', type=str)
     parser.add_argument('--num_layers', default=1, type=int)
     parser.add_argument('--emb_dim', default=64, type=int)
     parser.add_argument('--hid_dim', default=150, type=int)
@@ -90,7 +89,8 @@ def main():
 
     args = parser.parse_args()
 
-    train, valid, vocab_dict = zorro.utils.shingle_dataset(args, vocab_dict=None)
+    train, valid, vocab_dict = zorro.utils.shingle_dataset(args,
+                                                           vocab_dict=None)
 
     print(f' * vocabulary size {len(vocab_dict)}')
     print(f' * number of train batches {len(train)}')
@@ -107,7 +107,8 @@ def main():
                                     att_type='general',
                                     task=args.task)
 
-    u.initialize_model(model, rnn={'type': 'orthogonal', 'args': {'gain': 1.0}})
+    u.initialize_model(model, rnn={'type': 'orthogonal',
+                                   'args': {'gain': 1.0}})
 
     optimizer = getattr(optim, args.optim)(model.parameters(), lr=args.lr)
 
@@ -117,15 +118,16 @@ def main():
     if args.gpu:
         model.cuda()
 
-    #early_stopping = EarlyStopping(patience=args.patience, maxsize=3)
-    early_stopping = None
+    early_stopping = EarlyStopping(patience=2, maxsize=3)
     trainer = SkipthoughtsTrainer(
         model, {'train': train, 'valid': valid}, optimizer,
         early_stopping=early_stopping, max_norm=args.max_norm)
+
     trainer.add_loggers(StdLogger())
     trainer.set_additional_params(args, vocab_dict)
 
-    hook = make_translation_hook(args.target, args.gpu, beam=args.beam, max_len=args.right_size)
+    hook = make_translation_hook(args.target, args.gpu,
+                                 beam=args.beam, max_len=args.right_size)
     trainer.add_hook(hook, num_checkpoints=3)
 
     hook = u.make_schedule_hook(
@@ -136,7 +138,8 @@ def main():
         args.epochs, args.checkpoint, shuffle=True,
         use_schedule=args.use_schedule)
 
-    u.save_checkpoint(args.model_path, best_model, vars(args), d=vocab_dict, ppl=valid_loss)
+    u.save_checkpoint(args.model_path, best_model, vars(args),
+                      d=vocab_dict, ppl=valid_loss)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,5 @@
+import os
+import shutil
 
 import torch
 import torch.nn as nn
@@ -6,18 +8,20 @@ from torch.autograd import Variable
 
 from seqmod.misc.beam_search import Beam
 from seqmod.misc import Trainer
+from seqmod.misc import EarlyStopping
+import seqmod.utils as u
+
 from seqmod.modules.encoder import RNNEncoder
 from seqmod.modules.decoder import RNNDecoder
 from seqmod.modules.embedding import Embedding
 from seqmod.modules.torch_utils import flip, shards
-
 from seqmod.modules.exposure import scheduled_sampling
 
 import zorro.utils
 
 class SkipthoughtsTrainer(Trainer):
-    def set_additional_params(self, dataset_args, vocab_dict):
-        self.dataset_args = dataset_args
+    def set_additional_params(self, add_args, vocab_dict):
+        self.add_args = add_args
         self.vocab_dict = vocab_dict
 
     def on_epoch_end(self, epoch, loss, examples, duration, valid_loss=None):
@@ -25,8 +29,27 @@ class SkipthoughtsTrainer(Trainer):
                                "loss": loss.pack(labels=True),
                                "examples": examples,
                                "duration": duration})
+
         self.log('info', 'Reshingling data')
-        train, valid, _ = zorro.utils.shingle_dataset(self.dataset_args,
+
+        # store the best current checkpoint:
+        check_path = self.add_args.model_path + '/checkpoints/'
+        if len(self.early_stopping.queue):
+            valid_loss, model = self.early_stopping.queue[0]
+            if valid_loss:
+                if os.path.isdir(check_path):
+                    shutil.rmtree(check_path)
+                u.save_checkpoint(check_path,
+                                  model, vars(self.add_args),
+                                  suffix = 'checkp',
+                                  d=self.vocab_dict, ppl=None)
+        
+        # tmp remove datasets to avoid memory issues:
+        del self.datasets['train']
+        del self.datasets['valid']
+
+        # reshingle the data;
+        train, valid, _ = zorro.utils.shingle_dataset(self.add_args,
                                                       focus_size=epoch + 1,
                                                       right_size=epoch + 1,
                                                       vocab_dict=self.vocab_dict)
