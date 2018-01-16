@@ -46,7 +46,7 @@ def make_translation_hook(target, gpu, beam=True, max_len=4):
                                     beam=beam, max_len=max_len)
         hyps = [u.format_hyp(score, hyp, num + 1, trg_dict)
                 for num, (score, hyp) in enumerate(zip(scores, hyps))]
-        trainer.log("info", '\n***' + ''.join(hyps) + '\n***')
+        print("info", '\n***' + ''.join(hyps) + '\n***')
 
     return hook
 
