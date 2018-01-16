@@ -4,8 +4,9 @@ Usage:
 python train.py --input="/home/mike/GitRepos/zorro/data" --max_len=120 --dev=0.05 \
   --task="couples" --focus_size=30 --right_size=30 --beam --shingling="characters" \
   --allow_overlap --shuffle --grow_n_epochs=1 --epochs=20 --batch_size=128 \
-  --dropout=0.2 --use_schedule --patience=2 --checkpoint=50 \
-  --hooks_per_epoch=2  --target="Ze was" --bidi --json="history.json" \
+  --dropout=0.2 --use_schedule --patience=2 \
+  --batches_for_checkpoint=50 --checkpoints_for_hooks=1 \
+  --target="Ze was" --bidi --json="history.json" \
   --model_path="model" --num_layers=2 --hid_dim=128 --tie_weights \
   --max_items 10000
   # --grow --gpu
@@ -85,8 +86,9 @@ def main():
     parser.add_argument('--use_schedule', action='store_true')
     parser.add_argument('--patience', default=10, type=int)
     parser.add_argument('--reverse', action='store_true')
-    parser.add_argument('--checkpoint', default=5, type=int)
-    parser.add_argument('--hooks_per_epoch', default=None, type=int)
+    parser.add_argument('--batches_for_checkpoint', default=50, type=int)
+    parser.add_argument('--checkpoints_for_hooks', default=1, type=int)
+    #parser.add_argument('--hooks_per_epoch', default=1, type=int)
     parser.add_argument('--target', default='Ze was', type=str)
     parser.add_argument('--bidi', action='store_true')
     parser.add_argument('--beam', action='store_true')
@@ -114,8 +116,6 @@ def main():
     print(f' * number of train batches {len(train)}')
     print(f' * number of dev batches {len(valid)}')
     print(f' * maximum batch size {args.batch_size}')
-
-    args.checkpoint = min(len(train), args.checkpoint)
 
     model = make_skipthoughts_model(num_layers=args.num_layers,
                                     emb_dim=args.emb_dim,
@@ -146,20 +146,21 @@ def main():
         logger = JsonLogger(json_file=args.json)
     else:
         logger = StdLogger()
+
     trainer.add_loggers(logger)
 
     trainer.set_additional_params(args, vocab_dict)
 
     hook = make_translation_hook(args.target, args.gpu,
                                  beam=args.beam, max_len=args.right_size)
-    trainer.add_hook(hook, num_checkpoints=3)
+    trainer.add_hook(hook, num_checkpoints=args.checkpoints_for_hooks)
 
     hook = u.make_schedule_hook(
         inflection_sigmoid(len(train) * 2, 1.75, inverse=True))
-    trainer.add_hook(hook, hooks_per_epoch=200)
+    trainer.add_hook(hook, num_checkpoints=args.checkpoints_for_hooks)
 
     (best_model, valid_loss), test_loss = trainer.train(
-        args.epochs, args.checkpoint, shuffle=True,
+        args.epochs, args.batches_for_checkpoint, shuffle=True,
         use_schedule=args.use_schedule)
 
     u.save_checkpoint(args.model_path, best_model, vars(args),

@@ -54,8 +54,6 @@ class SkipthoughtsTrainer(Trainer):
                 # add one to current sizes
                 fs = self.add_args.focus_size + 1
                 rs = self.add_args.focus_size + 1
-                print(fs)
-                print(rs)
 
                 # reshingle the data:
                 train, valid, _ = shingle_dataset(self.add_args,
