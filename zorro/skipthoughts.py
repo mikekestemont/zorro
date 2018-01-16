@@ -32,8 +32,6 @@ class SkipthoughtsTrainer(Trainer):
                                "examples": examples,
                                "duration": duration})
 
-        self.log('info', 'Reshingling data')
-
         # store the best current checkpoint:
         check_path = self.add_args.model_path + '/checkpoints/'
         if len(self.early_stopping.queue):
@@ -47,23 +45,21 @@ class SkipthoughtsTrainer(Trainer):
                                   d=self.vocab_dict, ppl=None)
 
         if self.add_args.grow and (epoch + 1) % self.add_args.grow_n_epochs == 0:
-                # tmp remove datasets to avoid memory issues:
-                del self.datasets['train']
-                del self.datasets['valid']
-
-                # add one to current sizes
-                fs = self.add_args.focus_size + 1
-                rs = self.add_args.focus_size + 1
-
-                # reshingle the data:
-                train, valid, _ = shingle_dataset(self.add_args,
-                                                  focus_size=fs,
-                                                  right_size=rs,
-                                                  vocab_dict=self.vocab_dict)
-
-                # add new datasets to model
-                self.datasets['train'] = train
-                self.datasets['valid'] = valid
+            self.log('info', 'Reshingling data')
+            # tmp remove datasets to avoid memory issues:
+            del self.datasets['train']
+            del self.datasets['valid']
+            # add one to current sizes
+            fs = self.add_args.focus_size + 1
+            rs = self.add_args.focus_size + 1
+            # reshingle the data:
+            train, valid, _ = shingle_dataset(self.add_args,
+                                              focus_size=fs,
+                                              right_size=rs,
+                                              vocab_dict=self.vocab_dict)
+            # add new datasets to model
+            self.datasets['train'] = train
+            self.datasets['valid'] = valid
 
 
 class Skipthoughts(nn.Module):
