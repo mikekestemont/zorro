@@ -1,15 +1,15 @@
 """
 Usage:
-
-python train.py --input="/home/mike/GitRepos/zorro/data" --dev=0.05 \
-  --task="couples" --focus_size=50 --right_size=30 --beam --shingling="characters" \
-  --shuffle --epochs=20 --batch_size=128 \
+CUDA_VISIBLE_DEVICES=0 \
+python train.py --input="/home/mike/weasimov_data/04cleaned" --dev=0.05 \
+  --task="couples" --focus_size=100 --right_size=50 --beam --shingling="characters" \
+  --shuffle --epochs=20 --batch_size=256 \
   --dropout=0.1 --use_schedule --patience=10 \
-  --batches_for_checkpoint=50 --checkpoints_for_hooks=1 \
+  --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="Ze was" --bidi --json="history.json" \
-  --model_path="model" --num_layers=2 --hid_dim=512 --tie_weights \
-  --max_items 10000
-  # --grow --gpu --grow_n_epochs=1
+  --model_path="tryout" --num_layers=2 --hid_dim=2048 \
+  --max_items 10000000 --gpu
+  # --grow --grow_n_epochs=1
 """
 
 import argparse
@@ -61,7 +61,7 @@ def main():
     parser.add_argument('--max_len', default=15, type=int)
     parser.add_argument('--dev', default=0.1, type=float)
     parser.add_argument('--rnd_seed', default=12345, type=int)
-    parser.add_argument('--max_items', default=1000, type=int)
+    parser.add_argument('--max_items', default=None, type=int)
     parser.add_argument('--task', default='couples', type=str)
     parser.add_argument('--focus_size', default=15, type=int)
     parser.add_argument('--left_size', default=15, type=int)
