@@ -8,8 +8,8 @@ python train.py --input="/home/mike/weasimov_data/04cleaned" --dev=0.05 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="Ze was" --bidi --json="history.json" \
   --model_path="tryout" --num_layers=2 --hid_dim=2048 \
-  --max_items 10000000 --gpu
-  # --grow --grow_n_epochs=1
+  --gpu
+  # --grow --grow_n_epochs=1 --max_items 10000000 
 """
 
 import argparse
@@ -136,7 +136,7 @@ def main():
     if args.gpu:
         model.cuda()
 
-    early_stopping = EarlyStopping(patience=args.patience, maxsize=5)
+    early_stopping = EarlyStopping(patience=args.patience, maxsize=1)
     trainer = SkipthoughtsTrainer(
         model, {'train': train, 'valid': valid}, optimizer,
         early_stopping=early_stopping, max_norm=args.max_norm)
