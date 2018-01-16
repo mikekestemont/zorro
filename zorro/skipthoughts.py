@@ -19,7 +19,9 @@ from seqmod.modules.exposure import scheduled_sampling
 
 from zorro.utils import shingle_dataset
 
+
 class SkipthoughtsTrainer(Trainer):
+
     def set_additional_params(self, add_args, vocab_dict):
         self.add_args = add_args
         self.vocab_dict = vocab_dict
@@ -41,26 +43,29 @@ class SkipthoughtsTrainer(Trainer):
                     shutil.rmtree(check_path)
                 u.save_checkpoint(check_path,
                                   model, vars(self.add_args),
-                                  suffix = 'checkp',
+                                  suffix='checkp',
                                   d=self.vocab_dict, ppl=None)
-        
-        if self.add_args.grow:
-            # tmp remove datasets to avoid memory issues:
-            del self.datasets['train']
-            del self.datasets['valid']
-            
-            fs = self.add_args.focus_size + (epoch + 1) % self.add_args.grow_n_epochs
-            rs = self.add_args.right_size + (epoch + 1) % self.add_args.grow_n_epochs
-            
-            # reshingle the data:
-            train, valid, _ = shingle_dataset(self.add_args,
-                                              focus_size=fs,
-                                              right_size=rs,
-                                              vocab_dict=self.vocab_dict)
 
-            # add new datasets to model
-            self.datasets['train'] = train
-            self.datasets['valid'] = valid
+        if self.add_args.grow and (epoch + 1) % self.add_args.grow_n_epochs == 0:
+                # tmp remove datasets to avoid memory issues:
+                del self.datasets['train']
+                del self.datasets['valid']
+
+                # add one to current sizes
+                fs = self.add_args.focus_size + 1
+                rs = self.add_args.focus_size + 1
+                print(fs)
+                print(rs)
+
+                # reshingle the data:
+                train, valid, _ = shingle_dataset(self.add_args,
+                                                  focus_size=fs,
+                                                  right_size=rs,
+                                                  vocab_dict=self.vocab_dict)
+
+                # add new datasets to model
+                self.datasets['train'] = train
+                self.datasets['valid'] = valid
 
 
 class Skipthoughts(nn.Module):
@@ -137,7 +142,6 @@ class Skipthoughts(nn.Module):
         elif self.task == 'triples':
             left_trg, trg = trgs
 
-
         if self.encoder.conditional:
             (src, *src_conds) = src
         (src, src_lengths) = src
@@ -211,7 +215,7 @@ class Skipthoughts(nn.Module):
         """
         eos = self.decoder.embeddings.d.get_eos()
         bos = self.decoder.embeddings.d.get_bos()
-        
+
         if hasattr(self, 'reverse') and self.reverse:
             bos, eos = eos, bos
         seq_len, batch_size = src.size()

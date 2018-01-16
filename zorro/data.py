@@ -123,8 +123,8 @@ class CoupleStore(object):
         if not shingle_stride:
             print('Setting `shingle_stride` to `focus_size`')
             shingle_stride = focus_size
-        if shingle_stride > right_size or shingle_stride > focus_size:
-            raise ValueError(f'`shingle_stride` too large: you are missing out on data.')
+        if shingle_stride > focus_size:
+            print(f'`shingle_stride` larger than `focus_size`: you are missing out on data.')
 
         self.shingling = shingling
         self.focus_size = focus_size

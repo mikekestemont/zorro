@@ -4,9 +4,10 @@ Usage:
 python train.py --input="/home/mike/GitRepos/zorro/data" --max_len=120 --dev=0.05 \
   --task="couples" --focus_size=30 --right_size=30 --beam --shingling="characters" \
   --allow_overlap --shuffle --grow_n_epochs=1 --epochs=20 --batch_size=128 \
-  --dropout=0.2 --use_schedule --patience=10 --checkpoint=50 --hooks_per_epoch=2 \
-  --target="Ze was" --bidi --json="history.json" --model_path="model" \
-  --num_layers=2 --hid_dim=128 --tie_weights --max_items 10000
+  --dropout=0.2 --use_schedule --patience=2 --checkpoint=50 \
+  --hooks_per_epoch=2  --target="Ze was" --bidi --json="history.json" \
+  --model_path="model" --num_layers=2 --hid_dim=128 --tie_weights \
+  --max_items 10000
   # --grow --gpu
 """
 
