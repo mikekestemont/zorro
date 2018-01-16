@@ -18,8 +18,9 @@ from seqmod.misc import StdLogger, VisdomLogger, TensorboardLogger
 from seqmod.misc import PairedDataset, Dict, inflection_sigmoid
 import seqmod.utils as u
 
-import zorro.utils
+import zorro.utils as uz
 from zorro.data import CoupleStore
+from zorro.logging import JsonLogger, StdLogger
 from zorro.skipthoughts import make_skipthoughts_model, SkipthoughtsTrainer
 
 
@@ -28,8 +29,8 @@ def make_translation_hook(target, gpu, beam=True, max_len=4):
     def hook(trainer, epoch, batch_num, checkpoint):
         trainer.log("info", "Translating {}".format(target))
         trg_dict = trainer.model.decoder.embeddings.d
-        scores, hyps = zorro.utils.translate(trainer.model, target, gpu,
-                                             beam=beam, max_len=max_len)
+        scores, hyps = uz.translate(trainer.model, target, gpu,
+                                    beam=beam, max_len=max_len)
         hyps = [u.format_hyp(score, hyp, num + 1, trg_dict)
                 for num, (score, hyp) in enumerate(zip(scores, hyps))]
         trainer.log("info", '\n***' + ''.join(hyps) + '\n***')
@@ -74,8 +75,10 @@ def main():
     parser.add_argument('--checkpoint', default=5, type=int)
     parser.add_argument('--hooks_per_epoch', default=None, type=int)
     parser.add_argument('--target', default='Ze was', type=str)
+    parser.add_argument('--bidi', action='store_true')
     parser.add_argument('--beam', action='store_true')
     parser.add_argument('--plot', action='store_true')
+    parser.add_argument('--json', type=str, default='history.json')
 
     # model
     parser.add_argument('--model_path', default='./model_storage', type=str)
@@ -91,7 +94,7 @@ def main():
 
     args = parser.parse_args()
 
-    train, valid, vocab_dict = zorro.utils.shingle_dataset(args,
+    train, valid, vocab_dict = uz.shingle_dataset(args,
                                                            vocab_dict=None)
 
     print(f' * vocabulary size {len(vocab_dict)}')
@@ -105,7 +108,8 @@ def main():
                                     emb_dim=args.emb_dim,
                                     hid_dim=args.hid_dim,
                                     src_dict=vocab_dict,
-                                    cell='GRU', bidi=True,
+                                    cell=args.cell,
+                                    bidi=args.bidi,
                                     att_type='general',
                                     task=args.task)
 
@@ -120,12 +124,17 @@ def main():
     if args.gpu:
         model.cuda()
 
-    early_stopping = EarlyStopping(patience=3, maxsize=5)
+    early_stopping = EarlyStopping(patience=args.patience, maxsize=5)
     trainer = SkipthoughtsTrainer(
         model, {'train': train, 'valid': valid}, optimizer,
         early_stopping=early_stopping, max_norm=args.max_norm)
 
-    trainer.add_loggers(StdLogger())
+    if args.json:
+        logger = JsonLogger(json_file=args.json)
+    else:
+        logger = StdLogger()
+    trainer.add_loggers(logger)
+
     trainer.set_additional_params(args, vocab_dict)
 
     hook = make_translation_hook(args.target, args.gpu,
