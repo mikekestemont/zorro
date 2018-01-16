@@ -1,3 +1,15 @@
+"""
+Usage:
+
+python train.py --input="/home/mike/GitRepos/zorro/data" --max_len=120 --dev=0.05 \
+  --task="couples" --focus_size=30 --right_size=30 --beam --shingling="characters" \
+  --allow_overlap --shuffle --grow_n_epochs=1 --epochs=20 --batch_size=128 \
+  --dropout=0.2 --use_schedule --patience=10 --checkpoint=50 --hooks_per_epoch=2 \
+  --target="Ze was" --bidi --json="history.json" --model_path="model" \
+  --num_layers=2 --hid_dim=128 --tie_weights --max_items 10000
+  # --grow --gpu
+"""
+
 import argparse
 
 import random
@@ -43,7 +55,7 @@ def main():
     # dataset
     parser.add_argument('--path', type=str, default=None)
     parser.add_argument('--input', type=str, default='data')
-    parser.add_argument('--min_char_freq', type=int, default=10)
+    parser.add_argument('--min_char_freq', type=int, default=50)
     parser.add_argument('--min_len', default=1, type=int)
     parser.add_argument('--max_len', default=15, type=int)
     parser.add_argument('--dev', default=0.1, type=float)
@@ -58,14 +70,14 @@ def main():
     parser.add_argument('--allow_overlap', action='store_true', default=False)
     parser.add_argument('--shuffle', action='store_true')
     parser.add_argument('--grow', action='store_true')
-    parser.add_argument('--grow_n_epochs', default=3, type=int)
+    parser.add_argument('--grow_n_epochs', default=1, type=int)
 
     # training
     parser.add_argument('--epochs', default=5, type=int)
     parser.add_argument('--gpu', action='store_true')
     parser.add_argument('--batch_size', default=30, type=int)
     parser.add_argument('--optim', default='Adam', type=str)
-    parser.add_argument('--lr', default=0.01, type=float)
+    parser.add_argument('--lr', default=0.001, type=float)
     parser.add_argument('--max_norm', default=10., type=float)
     parser.add_argument('--dropout', default=0.25, type=float)
     parser.add_argument('--word_dropout', default=0.0, type=float)
