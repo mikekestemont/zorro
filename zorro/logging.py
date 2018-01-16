@@ -5,7 +5,7 @@ import logging
 from seqmod.misc.loggers import Logger, StdLogger
 
 
-class JsonLogger(Logger):
+class JsonLogger(StdLogger):
     """
     Standard python logger.
     Parameters
@@ -56,6 +56,3 @@ class JsonLogger(Logger):
             self.history.append(payload)
             with open(self.json_file, 'w') as jf:
                 jf.write(json.dumps(self.history, indent=4))
-
-        
-
