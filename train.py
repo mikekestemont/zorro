@@ -3,12 +3,12 @@ Usage:
 CUDA_VISIBLE_DEVICES=0 \
 python train.py --input="/home/mike/weasimov_data/04cleaned" --dev=0.05 \
   --task="couples" --focus_size=3 --right_size=3 --beam --shingling="characters" \
-  --shuffle --epochs=20 --batch_size=256 \
+  --shuffle --epochs=50 --batch_size=256 \
   --dropout=0.1 --use_schedule --patience=10 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="Ze was gisteren bij hem" --bidi --json="history.json" \
   --model_path="tryout" --num_layers=2 --hid_dim=2048 \
-  --gpu --grow --grow_n_epochs=1 --max_items 1000000 
+  --gpu --grow --grow_n_epochs=3 --max_items 1000000 
 """
 
 import argparse
@@ -121,7 +121,7 @@ def main():
                                     src_dict=vocab_dict,
                                     cell=args.cell,
                                     bidi=args.bidi,
-                                    att_type='mean',
+                                    att_type='dot',
                                     task=args.task)
 
     u.initialize_model(model, rnn={'type': 'orthogonal',
