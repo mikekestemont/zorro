@@ -121,7 +121,7 @@ def main():
                                     src_dict=vocab_dict,
                                     cell=args.cell,
                                     bidi=args.bidi,
-                                    att_type=None,
+                                    att_type='mean',
                                     task=args.task)
 
     u.initialize_model(model, rnn={'type': 'orthogonal',
