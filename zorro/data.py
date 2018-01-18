@@ -27,7 +27,7 @@ class SentenceCouples(object):
         self.max_item_len = max_len
         self.processed = 0
         self.tokenize, self.tokenizer = tokenize, None
-        if not self.tokenized:
+        if self.tokenize:
             self.tokenizer = MosesTokenizer()
 
     def __iter__(self):
