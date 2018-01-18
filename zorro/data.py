@@ -15,7 +15,7 @@ class SentenceCouples(object):
     """
     Pairs of sentences tokenized at the word-level.
     """
-    def __init__(self, input_, max_items=None, max_len=30, tokenized=False):
+    def __init__(self, input_, max_items=None, max_len=30, tokenized=True):
         if os.path.isdir(input_):
             if not input_.endswith('/'):
                 input_ += '/'
@@ -114,7 +114,8 @@ def shingle_dataset(args, vocab_dict=None, focus_size=None, right_size=None):
     # load the data:
     if args.task == 'sentences':
         dataset = list(SentenceCouples(args.input,
-                        max_items=args.max_items))
+                        max_items=args.max_items,
+                        tokenized=args.tokenized))
         print(f'* loaded {len(dataset)} sentences')
     elif args.task == 'snippets':
         dataset = list(SnippetCouples(args.input,

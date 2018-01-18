@@ -6,7 +6,7 @@ from nltk.tokenize.moses import MosesTokenizer
 
 """
 Usage:
-python to_tokens.py --inp='data' --outp='tokenized.txt' --min_len=1 --max_len=15 --max_items=100
+python to_tokens.py --inp="/home/mike/weasimov_data/04cleaned" --outp="tokenized.txt" --min_len=1 --max_len=25 --max_items=0
 
 """
 

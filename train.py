@@ -1,25 +1,25 @@
 """
 Usage (sentences of words):
 CUDA_VISIBLE_DEVICES=0 \
-python train.py --input="data" --dev=0.05 \
+python train.py --input="/home/mike/weasimov_data/04cleaned" --dev=0.05 \
   --task="sentences" --shuffle --epochs=50 --batch_size=128 \
   --dropout=0.1 --use_schedule --patience=10 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="Ze was gisteren bij hem" --bidi --json="history.json" \
-  --model_path="tryout" --num_layers=1 --hid_dim=240 --emb_dim=50 \
-  --max_vocab_size=10000 --max_items 1000000
+  --model_path="tryout" --num_layers=1 --hid_dim=1200 --emb_dim=300 \
+  --max_vocab_size=20000 --max_items=0 --gpu --max_len=25
   # --gpu 
-  # /home/mike/weasimov_data/04cleaned
+  # 
 
 Usage (snippets of characters):
 CUDA_VISIBLE_DEVICES=0 \
 python train.py --input="data" --dev=0.05 \
   --task="snippets" --shuffle --epochs=50 --batch_size=128 \
   --dropout=0.1 --use_schedule --patience=10 \
-  --focus_size=50 --right_size=30 \
+  --focus_size=50 --right_size=30 --max_len=25 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="Ze was gisteren bij hem" --bidi --json="history.json" \
-  --model_path="tryout" --num_layers=1 --hid_dim=240 --emb_dim=50 \
+  --model_path="tryout" --num_layers=1 --hid_dim=240 --emb_dim=64 \
   --max_vocab_size=1000 --max_items 1000000
   # --grow --grow_n_epochs=3 --gpu 
 """
@@ -84,6 +84,7 @@ def main():
     parser.add_argument('--shingle_stride', default=None, type=int)
     parser.add_argument('--allow_overlap', action='store_true', default=False)
     parser.add_argument('--shuffle', action='store_true')
+    parser.add_argument('--tokenize', action='store_true')
     parser.add_argument('--grow', action='store_true')
     parser.add_argument('--grow_n_epochs', default=1, type=int)
 
