@@ -28,14 +28,15 @@ class SkipthoughtsTrainer(Trainer):
 
     def on_epoch_end(self, epoch, loss, examples, duration, valid_loss=None):
         self.log("epoch_end", {"epoch": epoch,
-                               "loss": loss.pack(labels=True),
+                               "loss": loss.pack(),
                                "examples": examples,
                                "duration": duration})
 
         # store the best current checkpoint:
         check_path = self.add_args.model_path + '/checkpoints/'
         if len(self.early_stopping.queue):
-            valid_loss, model = self.early_stopping.queue[0]
+            
+            valid_loss, _, model = self.early_stopping.queue[0]
             if valid_loss:
                 if os.path.isdir(check_path):
                     shutil.rmtree(check_path)
@@ -49,9 +50,11 @@ class SkipthoughtsTrainer(Trainer):
             # tmp remove datasets to avoid memory issues:
             del self.datasets['train']
             del self.datasets['valid']
+
             # add one to current sizes
             fs = self.add_args.focus_size + 1
             rs = self.add_args.focus_size + 1
+
             # reshingle the data:
             train, valid, _ = shingle_dataset(self.add_args,
                                               focus_size=fs,

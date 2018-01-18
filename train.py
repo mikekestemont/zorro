@@ -6,7 +6,8 @@ python train.py --input="tokenized.txt" --dev=0.05 \
   --dropout=0.1 --use_schedule --patience=10 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="Ze was gisteren bij hem" --bidi --json="history.json" \
-  --model_path="tryout" --num_layers=1 --hid_dim=1200 --emb_dim=300 \
+  --model_path="tryout" --num_layers=1 --hid_dim=1200 \
+  --att_type=None --encoder-summary="inner_attention" --emb_dim=300 \
   --max_vocab_size=20000 --max_items=0 --gpu --max_len=25
   # --gpu 
   # 
@@ -118,7 +119,7 @@ def main():
     parser.add_argument('--add_init_jitter', action='store_true')
     parser.add_argument('--encoder-summary', default='inner-attention')
     parser.add_argument('--deepout_layers', type=int, default=0)
-    parser.add_argument('--att_type', type=str, default='bahdanau')
+    parser.add_argument('--att_type', type=str, default='none')
 
     args = parser.parse_args()
 
@@ -139,6 +140,7 @@ def main():
                                     src_dict=vocab_dict,
                                     cell=args.cell,
                                     bidi=args.bidi,
+                                    encoder_summary=args.encoder_summary,
                                     att_type=args.att_type,
                                     task=args.task,
                                     tie_weights=False)
