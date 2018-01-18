@@ -115,7 +115,7 @@ def shingle_dataset(args, vocab_dict=None, focus_size=None, right_size=None):
     if args.task == 'sentences':
         dataset = list(SentenceCouples(args.input,
                         max_items=args.max_items,
-                        tokenize=args.tokenized))
+                        tokenize=args.tokenize))
         print(f'* loaded {len(dataset)} sentences')
     elif args.task == 'snippets':
         dataset = list(SnippetCouples(args.input,
