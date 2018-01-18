@@ -1,14 +1,27 @@
 """
-Usage:
+Usage (sentences of words):
 CUDA_VISIBLE_DEVICES=0 \
-python train.py --input="/home/mike/weasimov_data/04cleaned" --dev=0.05 \
-  --task="couples" --focus_size=3 --right_size=3 --beam --shingling="characters" \
-  --shuffle --epochs=50 --batch_size=256 \
+python train.py --input="data" --dev=0.05 \
+  --task="sentences" --shuffle --epochs=50 --batch_size=128 \
   --dropout=0.1 --use_schedule --patience=10 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="Ze was gisteren bij hem" --bidi --json="history.json" \
-  --model_path="tryout" --num_layers=2 --hid_dim=2048 \
-  --gpu --grow --grow_n_epochs=3 --max_items 1000000 
+  --model_path="tryout" --num_layers=1 --hid_dim=240 --emb_dim=50 \
+  --max_vocab_size=10000 --max_items 1000000
+  # --gpu 
+  # /home/mike/weasimov_data/04cleaned
+
+Usage (snippets of characters):
+CUDA_VISIBLE_DEVICES=0 \
+python train.py --input="data" --dev=0.05 \
+  --task="snippets" --shuffle --epochs=50 --batch_size=128 \
+  --dropout=0.1 --use_schedule --patience=10 \
+  --focus_size=50 --right_size=30 \
+  --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
+  --target="Ze was gisteren bij hem" --bidi --json="history.json" \
+  --model_path="tryout" --num_layers=1 --hid_dim=240 --emb_dim=50 \
+  --max_vocab_size=1000 --max_items 1000000
+  # --grow --grow_n_epochs=3 --gpu 
 """
 
 import argparse
@@ -31,8 +44,10 @@ from seqmod.misc import StdLogger, VisdomLogger, TensorboardLogger
 from seqmod.misc import PairedDataset, Dict, inflection_sigmoid
 import seqmod.utils as u
 
+from nltk.tokenize.moses import MosesTokenizer
+
 import zorro.utils as uz
-from zorro.data import CoupleStore
+from zorro.data import SentenceCouples, SnippetCouples
 from zorro.logging import JsonLogger, StdLogger
 from zorro.skipthoughts import make_skipthoughts_model, SkipthoughtsTrainer
 
@@ -55,18 +70,18 @@ def main():
     parser = argparse.ArgumentParser()
     # dataset
     parser.add_argument('--input', type=str, default='data')
-    parser.add_argument('--min_char_freq', type=int, default=50)
+    parser.add_argument('--min_item_freq', type=int, default=50)
+    parser.add_argument('--max_vocab_size', type=int, default=20000)
     parser.add_argument('--min_len', default=1, type=int)
     parser.add_argument('--max_len', default=15, type=int)
     parser.add_argument('--dev', default=0.1, type=float)
     parser.add_argument('--rnd_seed', default=12345, type=int)
     parser.add_argument('--max_items', default=None, type=int)
-    parser.add_argument('--task', default='couples', type=str)
+    parser.add_argument('--task', default='sentences', type=str)
     parser.add_argument('--focus_size', default=15, type=int)
     parser.add_argument('--left_size', default=15, type=int)
     parser.add_argument('--right_size', default=15, type=int)
     parser.add_argument('--shingle_stride', default=None, type=int)
-    parser.add_argument('--shingling', default='characters', type=str)
     parser.add_argument('--allow_overlap', action='store_true', default=False)
     parser.add_argument('--shuffle', action='store_true')
     parser.add_argument('--grow', action='store_true')
@@ -86,7 +101,6 @@ def main():
     parser.add_argument('--reverse', action='store_true')
     parser.add_argument('--batches_for_checkpoint', default=50, type=int)
     parser.add_argument('--checkpoints_for_hooks', default=1, type=int)
-    #parser.add_argument('--hooks_per_epoch', default=1, type=int)
     parser.add_argument('--target', default='Ze was', type=str)
     parser.add_argument('--bidi', action='store_true')
     parser.add_argument('--beam', action='store_true')
@@ -99,13 +113,16 @@ def main():
     parser.add_argument('--emb_dim', default=64, type=int)
     parser.add_argument('--hid_dim', default=150, type=int)
     parser.add_argument('--cell', default='GRU')
-    parser.add_argument('--tie_weights', action='store_true')
     parser.add_argument('--train_init', action='store_true')
     parser.add_argument('--add_init_jitter', action='store_true')
     parser.add_argument('--encoder-summary', default='inner-attention')
     parser.add_argument('--deepout_layers', type=int, default=0)
+    parser.add_argument('--att_type', type=str, default='bahdanau')
 
     args = parser.parse_args()
+
+    if args.task == 'sentences':
+        args.target = MosesTokenizer().tokenize(args.target)
 
     train, valid, vocab_dict = uz.shingle_dataset(args,
                                                   vocab_dict=None)
@@ -121,8 +138,9 @@ def main():
                                     src_dict=vocab_dict,
                                     cell=args.cell,
                                     bidi=args.bidi,
-                                    att_type='dot',
-                                    task=args.task)
+                                    att_type=args.att_type,
+                                    task=args.task,
+                                    tie_weights=False)
 
     u.initialize_model(model, rnn={'type': 'orthogonal',
                                    'args': {'gain': 1.0}})

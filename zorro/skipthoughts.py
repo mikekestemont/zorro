@@ -131,10 +131,7 @@ class Skipthoughts(nn.Module):
         (src, trgs), (src_conds, trg_conds) = batch_data, (None, None)
 
         src = src[0]
-        if self.task == 'couples':
-            trg = trgs[0]
-        elif self.task == 'triples':
-            left_trg, trg = trgs
+        trg = trgs[0]
 
         if self.encoder.conditional:
             (src, *src_conds) = src
@@ -360,9 +357,7 @@ def make_skipthoughts_model(
         condition in same order as `cond_dims`.
     - task: str (default: 'couples'), one of ('couples', 'triples')
     """
-    assert task in ('couples', 'triples'), f"Unsupported `task`: {task}"
-    if task == 'triples':
-        raise NotImplementedError
+    assert task in ('sentences', 'snippets'), f"Unsupported `task`: {task}"
 
     src_embeddings, trg_embeddings = make_embeddings(
         src_dict, trg_dict, emb_dim, word_dropout)
