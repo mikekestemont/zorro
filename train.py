@@ -1,7 +1,7 @@
 """
 Usage (sentences of words):
 CUDA_VISIBLE_DEVICES=0 \
-python train.py --input="/home/mike/weasimov_data/04cleaned" --dev=0.05 \
+python train.py --input="tokenized.txt" --dev=0.05 \
   --task="sentences" --shuffle --epochs=50 --batch_size=128 \
   --dropout=0.1 --use_schedule --patience=10 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
@@ -84,7 +84,7 @@ def main():
     parser.add_argument('--shingle_stride', default=None, type=int)
     parser.add_argument('--allow_overlap', action='store_true', default=False)
     parser.add_argument('--shuffle', action='store_true')
-    parser.add_argument('--tokenize', action='store_true')
+    parser.add_argument('--tokenize', action='store_true', default=False)
     parser.add_argument('--grow', action='store_true')
     parser.add_argument('--grow_n_epochs', default=1, type=int)
 
