@@ -6,8 +6,8 @@ python train.py --input="tokenized.txt" --dev=0.05 \
   --dropout=0.1 --use_schedule --patience=10 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="Ze was gisteren bij hem" --bidi --json="history.json" \
-  --model_path="tryout" --num_layers=1 --hid_dim=1200 \
-  --att_type=None --encoder-summary="inner_attention" --emb_dim=300 \
+  --model_path="tryout" --num_layers=1 --hid_dim=2400 \
+  --att_type=None --encoder-summary="inner-attention" --emb_dim=300 \
   --max_vocab_size=20000 --max_items=0 --gpu --max_len=25
   # --gpu 
   # 
@@ -17,12 +17,12 @@ CUDA_VISIBLE_DEVICES=0 \
 python train.py --input="data" --dev=0.05 \
   --task="snippets" --shuffle --epochs=50 --batch_size=128 \
   --dropout=0.1 --use_schedule --patience=10 \
-  --focus_size=50 --right_size=30 --max_len=25 \
+  --focus_size=3 --right_size=3 --max_len=25 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="Ze was gisteren bij hem" --bidi --json="history.json" \
   --model_path="tryout" --num_layers=1 --hid_dim=240 --emb_dim=64 \
-  --max_vocab_size=1000 --max_items 1000000
-  # --grow --grow_n_epochs=3 --gpu 
+  --max_vocab_size=1000 --max_items 10000 \
+  --grow --grow_n_epochs=1 --gpu 
 """
 
 import argparse
