@@ -44,7 +44,7 @@ class SentenceCouples(object):
                         tokens = tuple(self.tokenizer.tokenize(line))
                     except IndexError:
                         tokens = None
-                if len(tokens) > 0 and len(tokens) <= self.max_item_len:
+                if tokens and len(tokens) <= self.max_item_len:
                     couple.append(tokens)
                     if len(couple) == 2:
                         self.processed += 1
