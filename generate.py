@@ -27,7 +27,7 @@ import scipy.spatial.distance as sd
 import seqmod.utils as u
 import zorro.utils
 
-from nltk.tokenizer import MosesTokenizer
+from nltk.tokenize.moses import MosesTokenizer
 
 def main():
     # parse params:
