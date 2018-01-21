@@ -1,3 +1,14 @@
+"""
+Usage:
+CUDA_VISIBLE_DEVICES=0 \
+python generate.py --model_path="./Skipthoughts-2018_01_21-12_22_44-40.014-final/model.pt" \
+  --file_path="tokenized.txt" --beam --gpu --max_len=25 \
+  --dict_path="./Skipthoughts-2018_01_21-12_22_44-40.014-final/model.dict.pt" \
+  --target="Ze hield er veel van hem."
+
+
+"""
+
 import argparse
 
 import random
@@ -16,13 +27,14 @@ import scipy.spatial.distance as sd
 import seqmod.utils as u
 import zorro.utils
 
+from nltk.tokenizer import MosesTokenizer
 
 def main():
     # parse params:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', default='./Skipthoughts-2018_01_13-13_11_19-13.726/model.pt', type=str)
+    parser.add_argument('--model_path', default='./Skipthoughts-2018_01_21-12_22_44-40.014-final/model.pt', type=str)
     parser.add_argument('--file_path', default='big.txt', type=str)
-    parser.add_argument('--dict_path', default='./Skipthoughts-2018_01_13-13_11_19-13.726/model.dict.pt', type=str)
+    parser.add_argument('--dict_path', default='./Skipthoughts-2018_01_21-12_22_44-40.014-final/model.dict.pt', type=str)
     parser.add_argument('--beam', action='store_true')
     parser.add_argument('--gpu', action='store_true')
     parser.add_argument('--max_len', default=4, type=int)
@@ -35,7 +47,11 @@ def main():
 
     # translate the target:
     if args.target:
-        scores, hyps = zorro.utils.translate(model, args.target,
+        tokenizer = MosesTokenizer()
+        tokens = tokenizer.tokenize(args.target)
+        tokens = [t.lower() for t in tokens]
+
+        scores, hyps = zorro.utils.translate(model, tokens,
                                              beam=args.beam,
                                              max_len=args.max_len)
         hyps = [u.format_hyp(score, hyp, num + 1, vocab_dict)
@@ -43,6 +59,7 @@ def main():
         print(f'Translation for "{args.target}":\n',
               '\n***' + ''.join(hyps) + '\n***')
 
+    """
     # embed sentences/lines from a single document:
     lines = [' '.join(line.strip().split())
              for line in open(args.file_path, 'r')]
@@ -61,6 +78,7 @@ def main():
         for i in range(1, 5 + 1):
             print(' %d. %s (%.3f)' %
                  (i, lines[sorted_ids[i]][:75], scores[sorted_ids[i]]))
+    """
 
 
 if __name__ == '__main__':
