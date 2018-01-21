@@ -1,10 +1,10 @@
 """
 Usage:
 CUDA_VISIBLE_DEVICES=0 \
-python generate.py --model_path="./Skipthoughts-2018_01_21-12_22_44-40.014-final/model.pt" \
+python generate.py --model_path="tryout/Skipthoughts-2018_01_21-12_22_44-40.014-final/model.pt" \
   --file_path="tokenized.txt" --beam --gpu --max_len=25 \
-  --dict_path="./Skipthoughts-2018_01_21-12_22_44-40.014-final/model.dict.pt" \
-  --target="Ze hield er veel van hem."
+  --dict_path="tryout/Skipthoughts-2018_01_21-12_22_44-40.014-final/model.dict.pt" \
+  --target="Ze hield erg veel van hem."
 
 
 """
@@ -53,7 +53,8 @@ def main():
 
         scores, hyps = zorro.utils.translate(model, tokens,
                                              beam=args.beam,
-                                             max_len=args.max_len)
+                                             max_len=args.max_len,
+                                             gpu=args.gpu)
         hyps = [u.format_hyp(score, hyp, num + 1, vocab_dict)
                 for num, (score, hyp) in enumerate(zip(scores, hyps))]
         print(f'Translation for "{args.target}":\n',
