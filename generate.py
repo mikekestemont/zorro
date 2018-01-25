@@ -1,7 +1,7 @@
 """
 Usage:
 CUDA_VISIBLE_DEVICES=0 \
-python generate.py --model_dir="tryout/Skipthoughts-2018_01_21-12_22_44-40.014" \
+python generate.py --model_dir="EN_10MSENTS/Skipthoughts-2018_01_23-05_25_13-80.372-final" \
   --beam --gpu --max_len=25 \
   --target="It had been a long day."
 
@@ -33,7 +33,7 @@ from nltk import word_tokenize
 def main():
     # parse params:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_dir', default='./Skipthoughts-2018_01_21-12_22_44-40.014-final', type=str)
+    parser.add_argument('--model_dir', default='EN_10MSENTS/Skipthoughts-2018_01_23-05_25_13-80.372-final', type=str)
     #parser.add_argument('--file_path', default='big.txt', type=str)
     parser.add_argument('--beam', action='store_true')
     parser.add_argument('--gpu', action='store_true')
@@ -43,7 +43,7 @@ def main():
 
     # load model and dict
     model = u.load_model(args.model_dir + '/model.pt')
-    vocab_dict = u.load_model(args.model_path + '/model.dict.pt')
+    vocab_dict = u.load_model(args.model_dir + '/model.dict.pt')
 
     sents = ['It was a warm day.', 'It was a cold day.', 'His name was Mike.']
 
