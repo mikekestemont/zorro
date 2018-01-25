@@ -35,10 +35,9 @@ from zorro.utils import make_dataframe
 def main():
     # parse params:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', default='./Skipthoughts-2018_01_13-13_11_19-13.726/model.pt', type=str)
+    parser.add_argument('--model_dir', default='directory', type=str)
     parser.add_argument('--books_path', default='/Users/mike/GitRepos/potter/data/other/books_txt_full', type=str)
     parser.add_argument('--tokenize', action='store_true')
-    parser.add_argument('--dict_path', default='./Skipthoughts-2018_01_13-13_11_19-13.726/model.dict.pt', type=str)
     parser.add_argument('--gpu', action='store_true')
 
     parser.add_argument('--max_sent_len', default=25, type=int)
@@ -51,10 +50,10 @@ def main():
     args = parser.parse_args()
 
     # load model and dict
-    #model = u.load_model(args.model_path)
-    #vocab_dict = u.load_model(args.dict_path)
+    model = u.load_model(args.model_path + '/model.pt')
+    vocab_dict = u.load_model(args.model_path + '/model.dict.pt')
 
-    data = make_dataframe(args, model=None, vocab=None)
+    data = make_dataframe(args, model=model, vocab=vocab_dict)
 
     X = data.filter(regex='neur').as_matrix()
     X = np.array(X, dtype=np.float32)
