@@ -1,16 +1,14 @@
 """
 Usage (sentences of words):
 CUDA_VISIBLE_DEVICES=0 \
-python train.py --input="tokenized.txt" --dev=0.05 \
-  --task="sentences" --shuffle --epochs=50 --batch_size=128 \
+python train.py --input="data/en_tokenized_10MSENTS.txt" --dev=0.05 \
+  --task="sentences" --shuffle --epochs=2 --batch_size=128 \
   --dropout=0.1 --use_schedule --patience=10 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
-  --target="Ze was gisteren bij hem." --bidi --json="history.json" \
-  --model_path="tryout" --num_layers=1 --hid_dim=2400 \
+  --target="He stayed with her the whole day." --bidi --json="history.json" \
+  --model_path="EN_10MSENTS" --num_layers=1 --hid_dim=2400 \
   --att_type=none --encoder-summary="inner-attention" --emb_dim=300 \
-  --max_vocab_size=20000 --max_items=0 --gpu --max_len=30
-  # --gpu 
-  # 
+  --max_vocab_size=20000 --max_items=10000000 --gpu --max_len=30 \
 
 Usage (snippets of characters):
 CUDA_VISIBLE_DEVICES=0 \
@@ -45,7 +43,7 @@ from seqmod.misc import StdLogger, VisdomLogger, TensorboardLogger
 from seqmod.misc import PairedDataset, Dict, inflection_sigmoid
 import seqmod.utils as u
 
-from nltk.tokenize.moses import MosesTokenizer
+from nltk import word_tokenize
 
 import zorro.utils as uz
 from zorro.data import SentenceCouples, SnippetCouples
@@ -58,7 +56,7 @@ def make_translation_hook(target, gpu, beam=True, max_len=4):
     def hook(trainer, epoch, batch_num, checkpoint):
         trainer.log("info", "Translating {}".format(target))
         trg_dict = trainer.model.decoder.embeddings.d
-        scores, hyps = uz.translate(trainer.model, target, gpu,
+        scores, hyps = uz.translate(trainer.model, target, gpu=gpu,
                                     beam=beam, max_len=max_len)
         hyps = [u.format_hyp(score, hyp, num + 1, trg_dict)
                 for num, (score, hyp) in enumerate(zip(scores, hyps))]
@@ -124,7 +122,7 @@ def main():
     args = parser.parse_args()
 
     if args.task == 'sentences':
-        args.target = MosesTokenizer().tokenize(args.target)
+        args.target = [t.lower() for t in word_tokenize(args.target)]
 
     train, valid, vocab_dict = uz.shingle_dataset(args,
                                                   vocab_dict=None)
@@ -148,7 +146,8 @@ def main():
     u.initialize_model(model, rnn={'type': 'orthogonal',
                                    'args': {'gain': 1.0}})
 
-    optimizer = getattr(optim, args.optim)(model.parameters(), lr=args.lr)
+    optimizer = getattr(optim, args.optim)(model.parameters(),
+                                           lr=args.lr, amsgrad=True)
 
     print(model)
     print('* number of parameters: {}'.format(model.n_params()))
