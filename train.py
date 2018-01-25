@@ -147,7 +147,7 @@ def main():
                                    'args': {'gain': 1.0}})
 
     optimizer = getattr(optim, args.optim)(model.parameters(),
-                                           lr=args.lr, amsgrad=True)
+                                           lr=args.lr)#, amsgrad=True)
 
     print(model)
     print('* number of parameters: {}'.format(model.n_params()))

@@ -8,7 +8,7 @@
 
 Usage:
 CUDA_VISIBLE_DEVICES=0 \
-python neighbors.py --model_dir="EN_10MSENTS/Skipthoughts-2018_01_23-05_25_13-80.372-final" \
+python neighbors.py --model_path="EN_10MSENTS/Skipthoughts-2018_01_23-05_25_13-80.372-final" \
   --books_path="data/EN" --tokenize --gpu \
 
 
