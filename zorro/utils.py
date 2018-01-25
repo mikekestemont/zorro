@@ -17,12 +17,14 @@ from seqmod import utils as u
 from .data import *
 from seqmod.misc.dataset import PairedDataset, Dict
 
+from nltk import sent_tokenize, word_tokenize
 
 def translate(model, target, gpu, beam=True, max_len=4):
+    model.eval()
     src_dict = model.encoder.embeddings.d
     inp = torch.LongTensor(list(src_dict.transform([target]))).transpose(0, 1)
     length = torch.LongTensor([len(target)]) + 2
-    inp, length = u.wrap_variables((inp, length), volatile=True, gpu=gpu)
+    inp, length = u.wrap_variables((inp, length), volatile=True, gpu=True)
     if beam:
         scores, hyps, _ = model.translate_beam(
             inp, length, beam_width=5, max_decode_len=max_len)
@@ -33,7 +35,7 @@ def translate(model, target, gpu, beam=True, max_len=4):
 
 
 def embed_single(model, target):
-    model.train()
+    model.eval()
     src_dict = model.encoder.embeddings.d
     inp = torch.LongTensor(list(src_dict.transform([target]))).transpose(0, 1)
     length = torch.LongTensor([len(target)]) + 2
@@ -43,7 +45,7 @@ def embed_single(model, target):
 
 def make_dataframe(args, model, vocab):
     if args.tokenize:
-        tokenizer = MosesTokenizer()
+        from nltk.tokenize import word_tokenize, sent_tokenize
 
     genres = [p for p in os.listdir(args.books_path)
               if os.path.isdir(os.sep.join((args.books_path, p)))]
@@ -67,19 +69,24 @@ def make_dataframe(args, model, vocab):
 
             print('   '+filename)
             try:
-                lines = [l.strip() for l in open(filename, 'r')]
-                lines = [l for l in lines if l]
+                try:
+                    with open(filename, 'r') as nf:
+                        text = ' '.join(nf.read().strip().split())
+                except UnicodeDecodeError:
+                    continue
             except UnicodeDecodeError:
                 continue
 
             random.shuffle(lines)
             vectors = []
             sentence_cnt = 0
-            for line in lines:
-                if args.tokenize:
-                    tokens = tokenizer.tokenize(line)
-                else:
-                    tokens = line.split()
+            for sentence in sent_tokenize(text):
+                if sentence:
+                    try:
+                        tokens = word_tokenize(sentence)
+                    except IndexError:
+                        tokens = None
+                        continue
                 tokens = [t.lower() for t in tokens]
                 if len(tokens) >= args.min_sent_len and len(tokens) <= args.max_sent_len:
                     # vectorize...
