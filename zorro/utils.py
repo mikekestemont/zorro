@@ -79,7 +79,6 @@ def make_dataframe(args, model, vocab):
             except UnicodeDecodeError:
                 continue
 
-            random.shuffle(lines)
             vectors = []
             sentence_cnt = 0
             for sentence in sent_tokenize(text):
