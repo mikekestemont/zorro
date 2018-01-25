@@ -1,10 +1,9 @@
 """
 Usage:
 CUDA_VISIBLE_DEVICES=0 \
-python generate.py --model_path="tryout/Skipthoughts-2018_01_21-12_22_44-40.014-final/model.pt" \
-  --file_path="tokenized.txt" --beam --gpu --max_len=25 \
-  --dict_path="tryout/Skipthoughts-2018_01_21-12_22_44-40.014-final/model.dict.pt" \
-  --target="Ze hield erg veel van hem."
+python generate.py --model_dir="tryout/Skipthoughts-2018_01_21-12_22_44-40.014" \
+  --beam --gpu --max_len=25 \
+  --target="It had been a long day."
 
 
 """
@@ -27,14 +26,15 @@ import scipy.spatial.distance as sd
 import seqmod.utils as u
 import zorro.utils
 
-from nltk.tokenize.moses import MosesTokenizer
+from itertools import product
+from scipy.spatial.distance import cosine
+from nltk import word_tokenize
 
 def main():
     # parse params:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', default='./Skipthoughts-2018_01_21-12_22_44-40.014-final/model.pt', type=str)
-    parser.add_argument('--file_path', default='big.txt', type=str)
-    parser.add_argument('--dict_path', default='./Skipthoughts-2018_01_21-12_22_44-40.014-final/model.dict.pt', type=str)
+    parser.add_argument('--model_dir', default='./Skipthoughts-2018_01_21-12_22_44-40.014-final', type=str)
+    #parser.add_argument('--file_path', default='big.txt', type=str)
     parser.add_argument('--beam', action='store_true')
     parser.add_argument('--gpu', action='store_true')
     parser.add_argument('--max_len', default=4, type=int)
@@ -42,14 +42,22 @@ def main():
     args = parser.parse_args()
 
     # load model and dict
-    model = u.load_model(args.model_path)
-    vocab_dict = u.load_model(args.dict_path)
+    model = u.load_model(args.model_dir + '/model.pt')
+    vocab_dict = u.load_model(args.model_path + '/model.dict.pt')
+
+    sents = ['It was a warm day.', 'It was a cold day.', 'His name was Mike.']
+
+    for a, b in product(sents, repeat=2):
+        x = zorro.utils.embed_single(model, [t.lower() for t in word_tokenize(a)])
+        y = zorro.utils.embed_single(model, [t.lower() for t in word_tokenize(b)])
+
+        print(a, b, cosine(x, y))
 
     # translate the target:
     if args.target:
-        tokenizer = MosesTokenizer()
-        tokens = tokenizer.tokenize(args.target)
-        tokens = [t.lower() for t in tokens]
+        tokens = [t.lower() for t in word_tokenize(args.target)]
+        x = zorro.utils.embed_single(model, tokens)
+        print(x.shape)
 
         scores, hyps = zorro.utils.translate(model, tokens,
                                              beam=args.beam,
@@ -59,6 +67,7 @@ def main():
                 for num, (score, hyp) in enumerate(zip(scores, hyps))]
         print(f'Translation for "{args.target}":\n',
               '\n***' + ''.join(hyps) + '\n***')
+
 
     """
     # embed sentences/lines from a single document:
