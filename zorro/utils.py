@@ -19,12 +19,13 @@ from seqmod.misc.dataset import PairedDataset, Dict
 
 from nltk import sent_tokenize, word_tokenize
 
+
 def translate(model, target, gpu, beam=True, max_len=4):
     model.eval()
     src_dict = model.encoder.embeddings.d
     inp = torch.LongTensor(list(src_dict.transform([target]))).transpose(0, 1)
     length = torch.LongTensor([len(target)]) + 2
-    inp, length = u.wrap_variables((inp, length), volatile=True, gpu=True)
+    inp, length = u.wrap_variables((inp, length), volatile=True, gpu=False)
     if beam:
         scores, hyps, _ = model.translate_beam(
             inp, length, beam_width=5, max_decode_len=max_len)
@@ -42,6 +43,7 @@ def embed_single(model, target):
     inp, length = u.wrap_variables((inp, length), volatile=True, gpu=False)
     _, embedding = model.encoder.forward(inp, lengths=None)
     return embedding.data.numpy()[0].flatten()
+
 
 def make_dataframe(args, model, vocab):
     if args.tokenize:
@@ -89,8 +91,7 @@ def make_dataframe(args, model, vocab):
                         continue
                 tokens = [t.lower() for t in tokens]
                 if len(tokens) >= args.min_sent_len and len(tokens) <= args.max_sent_len:
-                    # vectorize...
-                    vector = np.random.uniform(size=2400)
+                    vector = embed_single(model, tokens)
                     vectors.append(vector)
                     sentence_cnt += 1
                     if sentence_cnt >= args.sents_per_book:
