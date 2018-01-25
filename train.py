@@ -92,7 +92,7 @@ def main():
     parser.add_argument('--gpu', action='store_true')
     parser.add_argument('--batch_size', default=30, type=int)
     parser.add_argument('--optim', default='Adam', type=str)
-    parser.add_argument('--lr', default=0.001, type=float)
+    parser.add_argument('--lr', default=0.0003, type=float)
     parser.add_argument('--max_norm', default=10., type=float)
     parser.add_argument('--dropout', default=0.25, type=float)
     parser.add_argument('--word_dropout', default=0.0, type=float)
