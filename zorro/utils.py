@@ -79,7 +79,7 @@ def make_dataframe(args, model, vocab):
             except UnicodeDecodeError:
                 continue
 
-            vectors = []
+            vectors, lines = [], []
             sentence_cnt = 0
             for sentence in sent_tokenize(text):
                 if sentence:
@@ -89,9 +89,11 @@ def make_dataframe(args, model, vocab):
                         tokens = None
                         continue
                 tokens = [t.lower() for t in tokens]
+
                 if len(tokens) >= args.min_sent_len and len(tokens) <= args.max_sent_len:
                     vector = embed_single(model, tokens)
                     vectors.append(vector)
+                    lines.append(' '.join(tokens))
                     sentence_cnt += 1
                     if sentence_cnt >= args.sents_per_book:
                         break
