@@ -5,6 +5,13 @@
     - at the sentence level
     - at the book level (some form of aggregation, e.g. mean)
 2 - Routine genre classificatio experiment
+
+Usage:
+CUDA_VISIBLE_DEVICES=0 \
+python neighbors.py --model_dir="EN_10MSENTS/Skipthoughts-2018_01_23-05_25_13-80.372-final" \
+  --books_path="data/EN" --tokenize --gpu \
+
+
 """
 
 import argparse
@@ -25,18 +32,14 @@ import seqmod.utils as u
 
 import pandas as pd
 import numpy as np
-
-from sklearn.neighbors import KNeighborsClassifier
-
-from nltk.tokenize.moses import MosesTokenizer
-
 from zorro.utils import make_dataframe
+
 
 def main():
     # parse params:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_dir', default='directory', type=str)
-    parser.add_argument('--books_path', default='/Users/mike/GitRepos/potter/data/other/books_txt_full', type=str)
+    parser.add_argument('--model_dir', default='EN_10MSENTS/Skipthoughts-2018_01_23-05_25_13-80.372-final', type=str)
+    parser.add_argument('--books_path', default='data/EN', type=str)
     parser.add_argument('--tokenize', action='store_true')
     parser.add_argument('--gpu', action='store_true')
 
@@ -44,8 +47,6 @@ def main():
     parser.add_argument('--min_sent_len', default=5, type=int)
     parser.add_argument('--sents_per_book', default=100, type=int)
     parser.add_argument('--books_per_genre', default=20, type=int)
-
-    parser.add_argument('--nb_top_features', default=5, type=int)
 
     args = parser.parse_args()
 
