@@ -57,7 +57,6 @@ def main():
     if args.target:
         tokens = [t.lower() for t in word_tokenize(args.target)]
         x = zorro.utils.embed_single(model, tokens)
-        print(x.shape)
 
         scores, hyps = zorro.utils.translate(model, tokens,
                                              beam=args.beam,
