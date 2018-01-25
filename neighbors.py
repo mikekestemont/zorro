@@ -38,7 +38,7 @@ from zorro.utils import make_dataframe
 def main():
     # parse params:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_dir', default='EN_10MSENTS/Skipthoughts-2018_01_23-05_25_13-80.372-final', type=str)
+    parser.add_argument('--model_path', default='EN_10MSENTS/Skipthoughts-2018_01_23-05_25_13-80.372-final', type=str)
     parser.add_argument('--books_path', default='data/EN', type=str)
     parser.add_argument('--tokenize', action='store_true')
     parser.add_argument('--gpu', action='store_true')
