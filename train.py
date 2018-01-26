@@ -3,9 +3,9 @@ Usage (sentences of words):
 CUDA_VISIBLE_DEVICES=0 \
 python train.py --input="data/en_tokenized_10MSENTS.txt" --dev=0.05 \
   --task="sentences" --shuffle --epochs=2 --batch_size=128 \
-  --dropout=0.1 --use_schedule --patience=10 \
+  --dropout=0.1 --patience=10 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
-  --target="He stayed with her the whole day." --bidi --json="history.json" \
+  --target="John stayed with her the whole day." --bidi --json="history.json" \
   --model_path="EN_10MSENTS" --num_layers=1 --hid_dim=2400 \
   --att_type=none --encoder-summary="inner-attention" --emb_dim=300 \
   --max_vocab_size=20000 --max_items=10000000 --gpu --max_len=30 \
@@ -14,7 +14,7 @@ Usage (snippets of characters):
 CUDA_VISIBLE_DEVICES=0 \
 python train.py --input="data" --dev=0.05 \
   --task="snippets" --shuffle --epochs=50 --batch_size=128 \
-  --dropout=0.1 --use_schedule --patience=10 \
+  --dropout=0.1 --patience=10 \
   --focus_size=3 --right_size=3 --max_len=25 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="Ze was gisteren bij hem" --bidi --json="history.json" \
@@ -173,9 +173,9 @@ def main():
                                  beam=args.beam, max_len=args.right_size)
     trainer.add_hook(hook, num_checkpoints=args.checkpoints_for_hooks)
 
-    hook = u.make_schedule_hook(
-        inflection_sigmoid(len(train) * 2, 1.75, inverse=True))
-    trainer.add_hook(hook, num_checkpoints=args.checkpoints_for_hooks)
+    #hook = u.make_schedule_hook(
+    #    inflection_sigmoid(len(train) * 2, 1.75, inverse=True))
+    #trainer.add_hook(hook, num_checkpoints=args.checkpoints_for_hooks)
 
     (best_model, valid_loss), test_loss = trainer.train(
         args.epochs, args.batches_for_checkpoint, shuffle=True,
