@@ -6,7 +6,7 @@ from nltk import sent_tokenize, word_tokenize
 
 """
 Usage:
-python to_tokens.py --inp="/home/mike/GitRepos/zorro/data/EN" --outp="data/en_tokenized_10M.txt" --min_len=1 --max_len=25 --max_items=100000 --sent_tokenize
+python to_tokens.py --inp="/home/mike/GitRepos/zorro/data/EN" --outp="data/en_tokenized_35M.txt" --min_len=1 --max_len=25 --max_items=35000000 --sent_tokenize
 
 """
 

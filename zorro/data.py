@@ -15,7 +15,8 @@ class SentenceCouples(object):
     """
     Pairs of sentences tokenized at the word-level.
     """
-    def __init__(self, input_, max_items=None, max_len=30, tokenize=False):
+    def __init__(self, input_, max_items=None, max_len=30,
+                 tokenize=False, level='word'):
         if os.path.isdir(input_):
             if not input_.endswith('/'):
                 input_ += '/'
@@ -27,7 +28,9 @@ class SentenceCouples(object):
         self.max_item_len = max_len
         self.processed = 0
         self.tokenize, self.tokenizer = tokenize, None
-        if self.tokenize:
+        assert level in ('word', 'char')
+        self.level = level
+        if self.level == 'word' and self.tokenize:
             self.tokenizer = MosesTokenizer()
 
     def __iter__(self):
@@ -37,15 +40,18 @@ class SentenceCouples(object):
                 line = ' '.join(line.strip().split())
                 if not line:
                     continue
-                if self.tokenize:
-                    try:
-                        tokens = tuple(self.tokenizer.tokenize(line))
-                    except IndexError:
-                        tokens = None
-                else:
-                    tokens = line.split()
-                if tokens and len(tokens) <= self.max_item_len:
-                    couple.append(tokens)
+                if self.level == 'words':
+                    if self.tokenize:
+                        try:
+                            items = tuple(self.tokenizer.tokenize(line))
+                        except IndexError:
+                            items = None
+                    else:
+                        items = line.split()
+                elif self.level == 'char':
+                    items = tuple(line.lower())
+                if items and len(items) <= self.max_item_len:
+                    couple.append(items)
                     if len(couple) == 2:
                         self.processed += 1
                         yield tuple(couple)
@@ -115,7 +121,8 @@ def shingle_dataset(args, vocab_dict=None, focus_size=None, right_size=None):
     if args.task == 'sentences':
         dataset = list(SentenceCouples(args.input,
                         max_items=args.max_items,
-                        tokenize=args.tokenize))
+                        tokenize=args.tokenize,
+                        level=args.level))
         print(f'* loaded {len(dataset)} sentences')
     elif args.task == 'snippets':
         dataset = list(SnippetCouples(args.input,

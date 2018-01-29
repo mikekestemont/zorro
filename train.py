@@ -2,13 +2,24 @@
 Usage (sentences of words):
 CUDA_VISIBLE_DEVICES=0 \
 python train.py --input="data/en_tokenized_10MSENTS.txt" --dev=0.05 \
-  --task="sentences" --shuffle --epochs=2 --batch_size=128 \
+  --task="sentences" --shuffle --epochs=2 --batch_size=256 \
   --dropout=0.1 --patience=10 \
   --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
   --target="John stayed with her the whole day." --bidi --json="history.json" \
-  --model_path="EN_10MSENTS" --num_layers=1 --hid_dim=2400 \
+  --model_path="EN_10MSENTS" --num_layers=1 --hid_dim=1200 \
   --att_type=none --encoder-summary="inner-attention" --emb_dim=300 \
-  --max_vocab_size=20000 --max_items=10000000 --gpu --max_len=30 \
+  --max_vocab_size=10000 --max_items=10000000 --gpu --max_len=30
+
+Usage (sentences of characters):
+CUDA_VISIBLE_DEVICES=0 \
+python train.py --input="data/en_tokenized_10MSENTS.txt" --dev=0.05 \
+  --task="sentences" --level='char' --shuffle --epochs=2 --batch_size=256 \
+  --dropout=0.1 --patience=10 --max_len=60 \
+  --batches_for_checkpoint=50 --checkpoints_for_hooks=10 \
+  --target="John stayed with her the whole day." --bidi --json="history.json" \
+  --model_path="EN_CHAR" --num_layers=1 --hid_dim=2400 \
+  --att_type=none --encoder-summary="inner-attention" --emb_dim=64 \
+  --max_vocab_size=100 --max_items=10000 --gpu
 
 Usage (snippets of characters):
 CUDA_VISIBLE_DEVICES=0 \
@@ -77,6 +88,7 @@ def main():
     parser.add_argument('--rnd_seed', default=12345, type=int)
     parser.add_argument('--max_items', default=None, type=int)
     parser.add_argument('--task', default='sentences', type=str)
+    parser.add_argument('--level', default='word', type=str)
     parser.add_argument('--focus_size', default=15, type=int)
     parser.add_argument('--left_size', default=15, type=int)
     parser.add_argument('--right_size', default=15, type=int)
@@ -121,8 +133,10 @@ def main():
 
     args = parser.parse_args()
 
-    if args.task == 'sentences':
+    if args.task == 'sentences' and args.level == 'word':
         args.target = [t.lower() for t in word_tokenize(args.target)]
+    elif args.task == 'sentences' and args.level == 'char':
+        args.target = tuple(args.target.lower())
 
     train, valid, vocab_dict = uz.shingle_dataset(args,
                                                   vocab_dict=None)
